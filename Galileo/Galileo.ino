@@ -1,4 +1,6 @@
 #include <pt.h>
+#include <Servo.h>
+#include <LiquidCrystal.h>
 
 // motor
 #define AIA 6
@@ -9,7 +11,7 @@
 #define rainPin A0
 #define motionPin A1
 #define tempPin A2
-#define LDRPin A3
+#define LDRPin 15
 
 struct pt ptSerialEvent;
 struct pt ptMotorFW;
@@ -18,27 +20,27 @@ struct pt ptRainSensor;
 struct pt ptMotionSensor;
 struct pt ptTempSensor;
 struct pt ptLDR;
+struct pt ptServo;
 
+Servo servo;
+String data;
 int rainRange, rainAnalog, motionAnalog, temp, light;
 
 PT_THREAD(serialEvent(struct pt *pt))
 {
     unsigned long t;
     PT_BEGIN(pt);
-    if(Serial.available())
-    {
-        String mesg = Serial.readStringUntil('\n');
-        Serial.flush();
-        Serial1.println(mesg);
-    }
     if(Serial1.available())
     {
         String mesg = Serial1.readStringUntil('\r');
         Serial1.flush();
         Serial.println(mesg);
     }
+    data = String(String(rainAnalog) + "," + String(motionAnalog) + "," + String(temp) + "," + String(light) + "\r");
+    Serial.println(data);
+    Serial1.println(data);
     t = millis();
-    PT_WAIT_WHILE(pt, millis() - t < 200);
+    PT_WAIT_WHILE(pt, millis() - t < 500);
     PT_END(pt);
 }
 
@@ -68,18 +70,6 @@ PT_THREAD(rainSensor(struct pt *pt))
     PT_BEGIN(pt);
     rainAnalog = analogRead(rainPin);
     rainRange = map(rainAnalog, 0, 1024, 0, 3);
-    switch (rainRange)
-    {
-        case 0:
-            Serial.println("Flood");
-            break;
-        case 1:
-            Serial.println("Rain Warning");
-            break;
-        case 2:
-            Serial.println("Not Raining");
-            break;
-    }
     t = millis();
     PT_WAIT_WHILE(pt, millis() - t < 200);
     PT_END(pt);
@@ -109,6 +99,26 @@ PT_THREAD(LDRSensor(struct pt *pt))
     PT_END(pt);
 }
 
+PT_THREAD(openServo(struct pt *pt))
+{
+    unsigned long t;
+    PT_BEGIN(pt);
+    servo.write(45);
+    t = millis();
+    PT_WAIT_WHILE(pt, millis() - t < 1000);
+    PT_END(pt);
+}
+
+PT_THREAD(closeServo(struct pt *pt))
+{
+    unsigned long t;
+    PT_BEGIN(pt);
+    servo.write(0);
+    t = millis();
+    PT_WAIT_WHILE(pt, millis() - t < 1000);
+    PT_END(pt);
+}
+
 void init()
 {
     Serial.begin(9600);
@@ -125,12 +135,18 @@ void init()
     pinMode(tempPin,INPUT);
     pinMode(LDRPin, INPUT);
 
-    PT_INIT(&ptSerialEvent);
     PT_INIT(&ptMotorFW);
     PT_INIT(&ptMotorBW);
     PT_INIT(&ptRainSensor)
     PT_INIT(&ptMotionSensor);
     PT_INIT(&ptTempSensor);
+    PT_INIT(&ptSerialEvent);
+    PT_INIT(&ptServo);
+
+    servo.attach(9);
+
+    data = "";
+    rainRange = rainAnalog = motionAnalog = temp = light = 0;
 
     Serial.flush();
     Serial.println("sys init");
@@ -144,9 +160,9 @@ void setup()
 
 void loop()
 {
-    serialEvent(&ptSerialEvent);
     rainSensor(&ptRainSensor);
     motionSensor(&ptMotionSensor);
     tempSensor(&ptTempSensor);
     LDRSensor(&ptLDR);
+    serialEvent(&ptSerialEvent);
 }
