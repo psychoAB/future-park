@@ -11,6 +11,7 @@
 #define motionPin A1
 #define tempPin A2
 #define LDRPin 15
+#define LEDPin 7
 
 struct pt ptSerialEvent;
 struct pt ptMotorFW;
@@ -20,6 +21,7 @@ struct pt ptMotionSensor;
 struct pt ptTempSensor;
 struct pt ptLDR;
 struct pt ptRunServo;
+struct pt ptLED;
 
 Servo servo;
 String data;
@@ -60,7 +62,14 @@ PT_THREAD(rainSensor(struct pt *pt))
 PT_THREAD(motionSensor(struct pt *pt))
 {
     PT_BEGIN(pt);
-    motionAnalog = digitalRead(motionPin);
+    if(String(webData[1]).indexOf("1") != -1)
+    {
+        motionAnalog = digitalRead(motionPin);
+    }
+    else if(String(webData[1]).indexOf("0") != -1)
+    {
+        motionAnalog = 0;
+    }
     PT_END(pt);
 }
 
@@ -96,6 +105,20 @@ PT_THREAD(runServo(struct pt *pt))
         servo.write(90);
         t = millis();
         PT_WAIT_WHILE(pt, millis() - t < 1000);
+    }
+    PT_END(pt);
+}
+
+PT_THREAD(LED(struct pt *pt))
+{
+    PT_BEGIN(pt);
+    if(String(webData[0]).indexOf("1") != -1)
+    {
+        analogWrite(LEDPin,100);
+    }
+    else if(String(webData[0]).indexOf("0") != -1)
+    {
+        analogWrite(LEDPin,0);
     }
     PT_END(pt);
 }
@@ -166,6 +189,7 @@ void init()
     pinMode(motionPin, INPUT);
     pinMode(tempPin,INPUT);
     pinMode(LDRPin, INPUT);
+    pinMode(LEDPin, OUTPUT);
 
     PT_INIT(&ptMotorFW);
     PT_INIT(&ptMotorBW);
@@ -174,13 +198,14 @@ void init()
     PT_INIT(&ptTempSensor);
     PT_INIT(&ptSerialEvent);
     PT_INIT(&ptRunServo);
+    PT_INIT(&ptLED);
 
     servo.attach(3);
     data = "";
-    for(int i = 0; i > 4; i++)
-    {
-        webData[i] = 0;
-    }
+    webData[0] = 0;
+    webData[1] = 1;
+    webData[2] = 0;
+    webData[3] = 0;
     rainRange = rainAnalog = motionAnalog = temp = light = 0;
 
     Serial.flush();
@@ -200,5 +225,6 @@ void loop()
     tempSensor(&ptTempSensor);
     LDRSensor(&ptLDR);
     runServo(&ptRunServo);
+    LED(&ptLED);
     serialEvent(&ptSerialEvent);
 }
