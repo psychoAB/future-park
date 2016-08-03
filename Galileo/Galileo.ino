@@ -1,6 +1,5 @@
 #include <pt.h>
 #include <Servo.h>
-#include <LiquidCrystal.h>
 
 // motor
 #define AIA 6
@@ -20,29 +19,12 @@ struct pt ptRainSensor;
 struct pt ptMotionSensor;
 struct pt ptTempSensor;
 struct pt ptLDR;
-struct pt ptServo;
+struct pt ptRunServo;
 
 Servo servo;
 String data;
-int rainRange, rainAnalog, motionAnalog, temp, light;
-
-PT_THREAD(serialEvent(struct pt *pt))
-{
-    unsigned long t;
-    PT_BEGIN(pt);
-    if(Serial1.available())
-    {
-        String mesg = Serial1.readStringUntil('\r');
-        Serial1.flush();
-        Serial.println(mesg);
-    }
-    data = String(String(rainAnalog) + "," + String(motionAnalog) + "," + String(temp) + "," + String(light) + "\r");
-    Serial.println(data);
-    Serial1.println(data);
-    t = millis();
-    PT_WAIT_WHILE(pt, millis() - t < 500);
-    PT_END(pt);
-}
+int webData[4];
+int rainRange, rainAnalog, motionAnalog, temp, light, weather;
 
 PT_THREAD(MotorFW(struct pt *pt))
 {
@@ -66,7 +48,7 @@ PT_THREAD(MotorBW(struct pt *pt))
 
 PT_THREAD(rainSensor(struct pt *pt))
 {
-    unsigned long t;
+    static unsigned long t;
     PT_BEGIN(pt);
     rainAnalog = analogRead(rainPin);
     rainRange = map(rainAnalog, 0, 1024, 0, 3);
@@ -91,7 +73,7 @@ PT_THREAD(tempSensor(struct pt *pt))
 
 PT_THREAD(LDRSensor(struct pt *pt))
 {
-    unsigned long t;
+    static unsigned long t;
     PT_BEGIN(pt);
     light = analogRead(LDRPin);
     t = millis();
@@ -99,23 +81,73 @@ PT_THREAD(LDRSensor(struct pt *pt))
     PT_END(pt);
 }
 
-PT_THREAD(openServo(struct pt *pt))
+PT_THREAD(runServo(struct pt *pt))
 {
-    unsigned long t;
+    static unsigned long t;
     PT_BEGIN(pt);
-    servo.write(45);
-    t = millis();
-    PT_WAIT_WHILE(pt, millis() - t < 1000);
+    if(String(webData[3]).indexOf("1") != -1)
+    {
+        servo.write(120);
+        t = millis();
+        PT_WAIT_WHILE(pt, millis() - t < 1000);
+    }
+    else if(String(webData[3]).indexOf("0") != -1)
+    {
+        servo.write(90);
+        t = millis();
+        PT_WAIT_WHILE(pt, millis() - t < 1000);
+    }
     PT_END(pt);
 }
 
-PT_THREAD(closeServo(struct pt *pt))
+PT_THREAD(serialEvent(struct pt *pt))
 {
-    unsigned long t;
+    static unsigned long t;
     PT_BEGIN(pt);
-    servo.write(0);
+    if(Serial1.available())
+    {
+        String mesg = Serial1.readStringUntil('\r');
+        Serial1.flush();
+        if(mesg.indexOf("/") == -1 && mesg != "" && mesg != "\n")
+        {
+            static String str;
+            static int element, index, lastIndex;
+            lastIndex = 0;
+            for(element = 0; element < 3; element++)
+            {
+                index = mesg.indexOf(",", lastIndex);
+                str = mesg.substring(lastIndex, index);
+                webData[element] = str.toInt();
+                lastIndex = index + 1;
+            }
+            str = mesg.substring(lastIndex);
+            webData[element] = str.toInt();
+            str = "";
+            for(element = 0; element < 4; element++)
+            {
+                str += String(webData[element]);
+                str += " ";
+            }
+            Serial.println(str);
+        }
+    }
+    if(rainRange == 0)
+    {
+        weather = 2;
+    }
+    else if(light < 100)
+    {
+        weather = 1;
+    }
+    else
+    {
+        weather = 0;
+    }
+    data = String("0," + String(weather) + "," + String(temp) + "," + "0" + "," + String(motionAnalog) + "," + "0" + "," + "0" + "\r");
+    Serial.println(String(millis()) + " " + data);
+    Serial1.println(data);
     t = millis();
-    PT_WAIT_WHILE(pt, millis() - t < 1000);
+    PT_WAIT_WHILE(pt, millis() - t < 3000);
     PT_END(pt);
 }
 
@@ -141,11 +173,14 @@ void init()
     PT_INIT(&ptMotionSensor);
     PT_INIT(&ptTempSensor);
     PT_INIT(&ptSerialEvent);
-    PT_INIT(&ptServo);
+    PT_INIT(&ptRunServo);
 
-    servo.attach(9);
-
+    servo.attach(3);
     data = "";
+    for(int i = 0; i > 4; i++)
+    {
+        webData[i] = 0;
+    }
     rainRange = rainAnalog = motionAnalog = temp = light = 0;
 
     Serial.flush();
@@ -164,5 +199,6 @@ void loop()
     motionSensor(&ptMotionSensor);
     tempSensor(&ptTempSensor);
     LDRSensor(&ptLDR);
+    runServo(&ptRunServo);
     serialEvent(&ptSerialEvent);
 }
