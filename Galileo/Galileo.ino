@@ -8,13 +8,16 @@
 
 #define rainPin A0
 #define motionPin A1
+#define tempPin A2
 
 struct pt ptSerialEvent;
 struct pt ptMotorFW;
 struct pt ptMotorBW;
 struct pt ptRainSensor;
+struct pt ptMotionSensor;
+struct pt ptTempSensor;
 
-int rainRange, rainAnalog, motionAnalog;
+int rainRange, rainAnalog, motionAnalog, temp;
 
 PT_THREAD(serialEvent(struct pt *pt))
 {
@@ -87,6 +90,13 @@ PT_THREAD(motionSensor(struct pt *pt))
     PT_END(pt);
 }
 
+PT_THREAD(tempSensor(struct pt *pt))
+{
+    PT_BEGIN(pt);
+    temp = (25*analogRead(tempPin) - 2050)/100;
+    PT_END(pt);
+}
+
 void init()
 {
     Serial.begin(9600);
@@ -100,11 +110,14 @@ void init()
 
     pinMode(rainPin,INPUT);
     pinMode(motionPin, INPUT);
+    pinMode(tempPin,INPUT);
 
     PT_INIT(&ptSerialEvent);
     PT_INIT(&ptMotorFW);
     PT_INIT(&ptMotorBW);
     PT_INIT(&ptRainSensor)
+    PT_INIT(&ptMotionSensor);
+    PT_INIT(&ptTempSensor);
 
     Serial.flush();
     Serial.println("sys init");
@@ -120,4 +133,6 @@ void loop()
 {
     serialEvent(&ptSerialEvent);
     rainSensor(&ptRainSensor);
+    motionSensor(&ptMotionSensor);
+    tempSensor(&ptTempSensor);
 }
