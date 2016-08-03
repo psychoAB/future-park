@@ -6,15 +6,15 @@
 #define BIA 11
 #define BIB 10
 
-// rain
-#define RN A0
+#define rainPin A0
+#define motionPin A1
 
 struct pt ptSerialEvent;
 struct pt ptMotorFW;
 struct pt ptMotorBW;
 struct pt ptRainSensor;
 
-int range, sensorReading;
+int rainRange, rainAnalog, motionAnalog;
 
 PT_THREAD(serialEvent(struct pt *pt))
 {
@@ -57,13 +57,13 @@ PT_THREAD(MotorBW(struct pt *pt))
     PT_END(pt);
 }
 
-PT_THREAD(RainSensor(struct pt *pt))
+PT_THREAD(rainSensor(struct pt *pt))
 {
     unsigned long t;
     PT_BEGIN(pt);
-    sensorReading = analogRead(RN);
-    range = map(sensorReading, 0, 1024, 0, 3);
-    switch (range)
+    rainAnalog = analogRead(rainPin);
+    rainRange = map(rainAnalog, 0, 1024, 0, 3);
+    switch (rainRange)
     {
         case 0:
             Serial.println("Flood");
@@ -80,6 +80,13 @@ PT_THREAD(RainSensor(struct pt *pt))
     PT_END(pt);
 }
 
+PT_THREAD(motionSensor(struct pt *pt))
+{
+    PT_BEGIN(pt);
+    motionAnalog = digitalRead(motionPin);
+    PT_END(pt);
+}
+
 void init()
 {
     Serial.begin(9600);
@@ -91,8 +98,8 @@ void init()
     pinMode(BIA,OUTPUT);
     pinMode(BIB,OUTPUT);
 
-    // rain
-    pinMode(RN,INPUT);
+    pinMode(rainPin,INPUT);
+    pinMode(motionPin, INPUT);
 
     PT_INIT(&ptSerialEvent);
     PT_INIT(&ptMotorFW);
@@ -112,5 +119,5 @@ void setup()
 void loop()
 {
     serialEvent(&ptSerialEvent);
-    RainSensor(&ptRainSensor);
+    rainSensor(&ptRainSensor);
 }
