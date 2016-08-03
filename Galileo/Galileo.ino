@@ -27,7 +27,7 @@ struct pt ptLED;
 Servo servo;
 String data;
 int webData[4];
-int rainRange, rainAnalog, motionDigital, temp, light, weather;
+int rainRange, rainAnalog, motionDigital, temp, lightAnalog, weather, light, water;
 
 PT_THREAD(MotorFW(struct pt *pt))
 {
@@ -93,7 +93,7 @@ PT_THREAD(LDRSensor(struct pt *pt))
 {
     static unsigned long t;
     PT_BEGIN(pt);
-    light = analogRead(LDRPin);
+    lightAnalog = analogRead(LDRPin);
     t = millis();
     PT_WAIT_WHILE(pt, millis() - t < 500);
     PT_END(pt);
@@ -105,13 +105,15 @@ PT_THREAD(runServo(struct pt *pt))
     PT_BEGIN(pt);
     if(String(webData[3]).indexOf("1") != -1)
     {
-        servo.write(120);
+        water = 1;
+        servo.write(100);
         t = millis();
         PT_WAIT_WHILE(pt, millis() - t < 1000);
     }
     else if(String(webData[3]).indexOf("0") != -1)
     {
-        servo.write(90);
+        water = 0;
+        servo.write(0);
         t = millis();
         PT_WAIT_WHILE(pt, millis() - t < 1000);
     }
@@ -123,10 +125,12 @@ PT_THREAD(LED(struct pt *pt))
     PT_BEGIN(pt);
     if(String(webData[0]).indexOf("1") != -1 || weather >= 1)
     {
+        light = 1;
         digitalWrite(LEDPin,HIGH);
     }
     else if(String(webData[0]).indexOf("0") != -1)
     {
+        light = 0;
         digitalWrite(LEDPin,LOW);
     }
     PT_END(pt);
@@ -167,7 +171,7 @@ PT_THREAD(serialEvent(struct pt *pt))
     {
         weather = 2;
     }
-    else if(light < 100)
+    else if(lightAnalog < 100)
     {
         weather = 1;
     }
@@ -175,11 +179,11 @@ PT_THREAD(serialEvent(struct pt *pt))
     {
         weather = 0;
     }
-    data = String("0," + String(weather) + "," + String(temp) + "," + "0" + "," + String(motionDigital) + "," + "0" + "," + "0" + "\r");
+    data = String("0," + String(weather) + "," + String(temp) + "," + String(light) + "," + String(motionDigital) + "," + "0" + "," + String(water) + "\r");
     Serial.println(String(millis()) + " " + data);
     Serial1.println(data);
     t = millis();
-    PT_WAIT_WHILE(pt, millis() - t < 3000);
+    PT_WAIT_WHILE(pt, millis() - t < 2000);
     PT_END(pt);
 }
 
@@ -213,10 +217,10 @@ void init()
     servo.attach(3);
     data = "";
     webData[0] = 0;
-    webData[1] = 1;
+    webData[1] = 0;
     webData[2] = 0;
     webData[3] = 0;
-    rainRange = rainAnalog = motionDigital = temp = light = 0;
+    rainRange = rainAnalog = motionDigital = temp = lightAnalog = light = water = 0;
 
     Serial.flush();
     Serial.println("sys init");
