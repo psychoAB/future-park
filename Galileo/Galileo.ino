@@ -5,10 +5,11 @@
 #define AIA 6
 #define AIB 5
 #define BIA 11
-#define BIB 10
+#define BIB 9
 
 #define rainPin A0
 #define motionPin A1
+#define buzzerPin 10
 #define tempPin A2
 #define LDRPin 15
 #define LEDPin 7
@@ -26,7 +27,7 @@ struct pt ptLED;
 Servo servo;
 String data;
 int webData[4];
-int rainRange, rainAnalog, motionAnalog, temp, light, weather;
+int rainRange, rainAnalog, motionDigital, temp, light, weather;
 
 PT_THREAD(MotorFW(struct pt *pt))
 {
@@ -64,11 +65,19 @@ PT_THREAD(motionSensor(struct pt *pt))
     PT_BEGIN(pt);
     if(String(webData[1]).indexOf("1") != -1)
     {
-        motionAnalog = digitalRead(motionPin);
+        motionDigital = digitalRead(motionPin);
+        if(motionDigital == 1)
+        {
+            tone(buzzerPin, 800, 2000);
+        }
+        else if(motionDigital == 0)
+        {
+            noTone(buzzerPin);
+        }
     }
     else if(String(webData[1]).indexOf("0") != -1)
     {
-        motionAnalog = 0;
+        motionDigital = 0;
     }
     PT_END(pt);
 }
@@ -112,13 +121,13 @@ PT_THREAD(runServo(struct pt *pt))
 PT_THREAD(LED(struct pt *pt))
 {
     PT_BEGIN(pt);
-    if(String(webData[0]).indexOf("1") != -1)
+    if(String(webData[0]).indexOf("1") != -1 || weather >= 1)
     {
-        analogWrite(LEDPin,100);
+        digitalWrite(LEDPin,HIGH);
     }
     else if(String(webData[0]).indexOf("0") != -1)
     {
-        analogWrite(LEDPin,0);
+        digitalWrite(LEDPin,LOW);
     }
     PT_END(pt);
 }
@@ -166,7 +175,7 @@ PT_THREAD(serialEvent(struct pt *pt))
     {
         weather = 0;
     }
-    data = String("0," + String(weather) + "," + String(temp) + "," + "0" + "," + String(motionAnalog) + "," + "0" + "," + "0" + "\r");
+    data = String("0," + String(weather) + "," + String(temp) + "," + "0" + "," + String(motionDigital) + "," + "0" + "," + "0" + "\r");
     Serial.println(String(millis()) + " " + data);
     Serial1.println(data);
     t = millis();
@@ -187,6 +196,7 @@ void init()
 
     pinMode(rainPin,INPUT);
     pinMode(motionPin, INPUT);
+    pinMode(buzzerPin, OUTPUT);
     pinMode(tempPin,INPUT);
     pinMode(LDRPin, INPUT);
     pinMode(LEDPin, OUTPUT);
@@ -206,7 +216,7 @@ void init()
     webData[1] = 1;
     webData[2] = 0;
     webData[3] = 0;
-    rainRange = rainAnalog = motionAnalog = temp = light = 0;
+    rainRange = rainAnalog = motionDigital = temp = light = 0;
 
     Serial.flush();
     Serial.println("sys init");
