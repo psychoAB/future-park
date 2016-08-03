@@ -6,7 +6,15 @@
 #define BIA 11
 #define BIB 10
 
+// rain
+#define RN A0
+
 struct pt ptSerialEvent;
+struct pt ptMotorFW;
+struct pt ptMotorBW;
+struct pt ptRainSensor;
+
+int range, sensorReading;
 
 PT_THREAD(serialEvent(struct pt *pt))
 {
@@ -29,7 +37,7 @@ PT_THREAD(serialEvent(struct pt *pt))
     PT_END(pt);
 }
 
-PT_THREAD(MoterFW(struct pt *pt))
+PT_THREAD(MotorFW(struct pt *pt))
 {
     PT_BEGIN(pt);
     analogWrite(AIA, 255);
@@ -39,7 +47,7 @@ PT_THREAD(MoterFW(struct pt *pt))
     PT_END(pt);
 }
 
-PT_THREAD(MoterBW(struct pt *pt))
+PT_THREAD(MotorBW(struct pt *pt))
 {
     PT_BEGIN(pt);
     analogWrite(AIA, 0);
@@ -49,17 +57,47 @@ PT_THREAD(MoterBW(struct pt *pt))
     PT_END(pt);
 }
 
+PT_THREAD(RainSensor(struct pt *pt))
+{
+    unsigned long t;
+    PT_BEGIN(pt);
+    sensorReading = analogRead(RN);
+    range = map(sensorReading, 0, 1024, 0, 3);
+    switch (range)
+    {
+        case 0:
+            Serial.println("Flood");
+            break;
+        case 1:
+            Serial.println("Rain Warning");
+            break;
+        case 2:
+            Serial.println("Not Raining");
+            break;
+    }
+    t = millis();
+    PT_WAIT_WHILE(pt, millis() - t < 200);
+    PT_END(pt);
+}
+
 void init()
 {
     Serial.begin(9600);
     Serial1.begin(115200);
 
+    // motor
     pinMode(AIA,OUTPUT);
     pinMode(AIB,OUTPUT);
     pinMode(BIA,OUTPUT);
     pinMode(BIB,OUTPUT);
 
+    // rain
+    pinMode(RN,INPUT);
+
     PT_INIT(&ptSerialEvent);
+    PT_INIT(&ptMotorFW);
+    PT_INIT(&ptMotorBW);
+    PT_INIT(&ptRainSensor)
 
     Serial.flush();
     Serial.println("sys init");
@@ -74,4 +112,5 @@ void setup()
 void loop()
 {
     serialEvent(&ptSerialEvent);
+    RainSensor(&ptRainSensor);
 }
