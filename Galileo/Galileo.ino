@@ -1,5 +1,11 @@
 #include <pt.h>
 
+// motor
+#define AIA 6
+#define AIB 5
+#define BIA 11
+#define BIB 10
+
 struct pt ptSerialEvent;
 
 PT_THREAD(serialEvent(struct pt *pt))
@@ -23,13 +29,46 @@ PT_THREAD(serialEvent(struct pt *pt))
     PT_END(pt);
 }
 
-void setup()
+PT_THREAD(MoterFW(struct pt *pt))
+{
+    PT_BEGIN(pt);
+    analogWrite(AIA, 255);
+    analogWrite(AIB, 0);
+    analogWrite(BIA, 255);
+    analogWrite(BIB, 0);
+    PT_END(pt);
+}
+
+PT_THREAD(MoterBW(struct pt *pt))
+{
+    PT_BEGIN(pt);
+    analogWrite(AIA, 0);
+    analogWrite(AIB, 255);
+    analogWrite(BIA, 0);
+    analogWrite(BIB, 255);
+    PT_END(pt);
+}
+
+void init()
 {
     Serial.begin(9600);
     Serial1.begin(115200);
-    Serial.flush();
+
+    pinMode(AIA,OUTPUT);
+    pinMode(AIB,OUTPUT);
+    pinMode(BIA,OUTPUT);
+    pinMode(BIB,OUTPUT);
+
     PT_INIT(&ptSerialEvent);
+
+    Serial.flush();
     Serial.println("sys init");
+    delay(500);
+}
+
+void setup()
+{
+    init();
 }
 
 void loop()
