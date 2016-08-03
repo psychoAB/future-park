@@ -18,8 +18,7 @@
 #define DHTOut 4
 
 struct pt ptSerialEvent;
-struct pt ptMotorFW;
-struct pt ptMotorBW;
+struct pt ptMotor;
 struct pt ptRainSensor;
 struct pt ptMotionSensor;
 struct pt ptTempSensor;
@@ -33,25 +32,32 @@ DHT dht(DHTIn, DHTOut, DHT11);
 String data;
 int webData[4];
 float humidity, humidityCheck;
-int rainRange, rainAnalog, motionDigital, temp, lightAnalog, weather, light, water, motion;
+int rainRange, rainAnalog, motionDigital, temp, lightAnalog, weather, light, water, motion, motorStatus;
 
-PT_THREAD(MotorFW(struct pt *pt))
+PT_THREAD(motor(struct pt *pt))
 {
+    unsigned long t;
     PT_BEGIN(pt);
-    analogWrite(AIA, 255);
-    analogWrite(AIB, 0);
-    analogWrite(BIA, 255);
-    analogWrite(BIB, 0);
-    PT_END(pt);
-}
-
-PT_THREAD(MotorBW(struct pt *pt))
-{
-    PT_BEGIN(pt);
-    analogWrite(AIA, 0);
-    analogWrite(AIB, 255);
-    analogWrite(BIA, 0);
-    analogWrite(BIB, 255);
+    if(String(webData[2]).indexOf("1") != -1)
+    {
+        motorStatus = 1;
+        analogWrite(AIA, 0);
+        analogWrite(AIB, 100);
+        analogWrite(BIA, 0);
+        analogWrite(BIB, 100);
+        t = millis();
+        PT_WAIT_WHILE(pt, millis() - t < 4300);
+    }
+    else if(String(webData[2]).indexOf("0") != -1)
+    {
+        motorStatus = 0;
+        analogWrite(AIA, 100);
+        analogWrite(AIB, 0);
+        analogWrite(BIA, 100);
+        analogWrite(BIB, 0);
+        t = millis();
+        PT_WAIT_WHILE(pt, millis() - t < 4300);
+    }
     PT_END(pt);
 }
 
@@ -153,7 +159,6 @@ PT_THREAD(DHTSensor(struct pt *pt))
     if(!isnan(humidityCheck))
     {
         humidity = humidityCheck;
-        //Serial.println(humidity);
     }
     PT_END(pt);
 }
@@ -203,7 +208,7 @@ PT_THREAD(serialEvent(struct pt *pt))
         weather= 0;
     }
     sprintf(humidityStr, "%.2f", humidity);
-    data = String(String(humidityStr) + "," + String(weather) + "," + String(temp) + "," + String(light) + "," + String(motion) + "," + "0" + "," + String(water) + "\r");
+    data = String(String(humidityStr) + "," + String(weather) + "," + String(temp) + "," + String(light) + "," + String(motion) + "," + String(motorStatus) + "," + String(water) + "\r");
     Serial.println(String(millis()) + " " + data);
     Serial1.println(data);
     t = millis();
@@ -229,8 +234,7 @@ void init()
     pinMode(LDRPin, INPUT);
     pinMode(LEDPin, OUTPUT);
 
-    PT_INIT(&ptMotorFW);
-    PT_INIT(&ptMotorBW);
+    PT_INIT(&ptMotor);
     PT_INIT(&ptRainSensor)
     PT_INIT(&ptMotionSensor);
     PT_INIT(&ptTempSensor);
@@ -246,7 +250,7 @@ void init()
     webData[1] = 0;
     webData[2] = 0;
     webData[3] = 0;
-    rainRange = rainAnalog = motionDigital = temp = lightAnalog = light = water = motion = humidity = humidityCheck = 0;
+    rainRange = rainAnalog = motionDigital = temp = lightAnalog = light = water = motion = humidity = humidityCheck = motorStatus = 0;
 
     Serial.flush();
     Serial.println("sys init");
@@ -267,5 +271,6 @@ void loop()
     runServo(&ptRunServo);
     LED(&ptLED);
     DHTSensor(&ptDHT);
+    motor(&ptMotor);
     serialEvent(&ptSerialEvent);
 }
