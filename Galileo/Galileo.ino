@@ -38,7 +38,7 @@ PT_THREAD(motor(struct pt *pt))
 {
     unsigned long t;
     PT_BEGIN(pt);
-    if(String(webData[2]).indexOf("1") != -1)
+    if(motorStatus != 1 && String(webData[2]).indexOf("1") != -1)
     {
         motorStatus = 1;
         analogWrite(AIA, 0);
@@ -48,7 +48,7 @@ PT_THREAD(motor(struct pt *pt))
         t = millis();
         PT_WAIT_WHILE(pt, millis() - t < 4300);
     }
-    else if(String(webData[2]).indexOf("0") != -1)
+    else if(motorStatus != 0 && String(webData[2]).indexOf("0") != -1)
     {
         motorStatus = 0;
         analogWrite(AIA, 100);
@@ -99,8 +99,11 @@ PT_THREAD(motionSensor(struct pt *pt))
 
 PT_THREAD(tempSensor(struct pt *pt))
 {
+    static unsigned long t;
     PT_BEGIN(pt);
     temp = (25*analogRead(tempPin) - 2050)/100;
+    t = millis();
+    PT_WAIT_WHILE(pt, millis() - t < 200);
     PT_END(pt);
 }
 
@@ -110,7 +113,7 @@ PT_THREAD(LDRSensor(struct pt *pt))
     PT_BEGIN(pt);
     lightAnalog = analogRead(LDRPin);
     t = millis();
-    PT_WAIT_WHILE(pt, millis() - t < 500);
+    PT_WAIT_WHILE(pt, millis() - t < 200);
     PT_END(pt);
 }
 
@@ -121,7 +124,7 @@ PT_THREAD(runServo(struct pt *pt))
     if(String(webData[3]).indexOf("1") != -1)
     {
         water = 1;
-        servo.write(100);
+        servo.write(80);
         t = millis();
         PT_WAIT_WHILE(pt, millis() - t < 1000);
     }
@@ -156,10 +159,13 @@ PT_THREAD(DHTSensor(struct pt *pt))
     static unsigned long t;
     PT_BEGIN(pt);
     humidityCheck = dht.readHumidity();
-    if(!isnan(humidityCheck))
+    if(!isnan(humidityCheck) && humidityCheck != 0.00)
     {
+        Serial.println(humidityCheck);
         humidity = humidityCheck;
     }
+    t = millis();
+    PT_WAIT_WHILE(pt, millis() - t < 200);
     PT_END(pt);
 }
 
