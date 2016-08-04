@@ -1,7 +1,7 @@
 #include <ServerExceed.h>
 
 WiFiServer server(80); // nodeMCU server : port 80
-char ssid[] = "eXceed 2G";
+char ssid[] = "nodeMCU only";
 char password[] = "";
 char host[] = "10.32.176.4";
 int port = 80;
