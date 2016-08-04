@@ -14,7 +14,7 @@
 #define tempPin A2
 #define LDRPin 15
 #define LEDPin 7
-#define DHTIn 5
+#define DHTIn 2
 #define DHTOut 4
 
 struct pt ptSerialEvent;
@@ -36,7 +36,7 @@ int rainRange, rainAnalog, motionDigital, temp, lightAnalog, weather, light, wat
 
 PT_THREAD(motor(struct pt *pt))
 {
-    unsigned long t;
+    static unsigned long t;
     PT_BEGIN(pt);
     if(motorStatus != 1 && String(webData[2]).indexOf("1") != -1)
     {
@@ -161,7 +161,6 @@ PT_THREAD(DHTSensor(struct pt *pt))
     humidityCheck = dht.readHumidity();
     if(!isnan(humidityCheck) && humidityCheck != 0.00)
     {
-        Serial.println(humidityCheck);
         humidity = humidityCheck;
     }
     t = millis();
@@ -205,7 +204,7 @@ PT_THREAD(serialEvent(struct pt *pt))
     {
         weather = 2;
     }
-    else if(lightAnalog < 100)
+    else if(lightAnalog < 800)
     {
         weather = 1;
     }
@@ -276,7 +275,7 @@ void loop()
     LDRSensor(&ptLDR);
     runServo(&ptRunServo);
     LED(&ptLED);
-    DHTSensor(&ptDHT);
+    //DHTSensor(&ptDHT);
     motor(&ptMotor);
     serialEvent(&ptSerialEvent);
 }
