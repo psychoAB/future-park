@@ -7,6 +7,8 @@
 ###### 1. Intel Galileo Gen2
 ###### 2. ESP8266 ESP-12E NodeMCU
 
+___
+
 ### Galileo.ino
 
 ###### info:
