@@ -1,8 +1,10 @@
 # future-park
 
 ### eXceed 13 project's hardware code
-#### Team name: Expecto Patronum
-#### Project status: Inactive
+#### Team name: 
+###### Expecto Patronum
+#### Project status:
+###### Inactive
 #### Hardware:
 ###### 1. Intel Galileo Gen2
 ###### 2. ESP8266 ESP-12E NodeMCU
