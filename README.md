@@ -21,7 +21,7 @@ ___
 1. value from DHT-11 sensor is unreliable.
 2. motor function is not working.
 
-### NoideMCU.ino
+### NodeMCU.ino
 
 ###### info:
 1. ServerExceed.h only release in eXceed 13
