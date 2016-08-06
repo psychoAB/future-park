@@ -24,4 +24,4 @@ ___
 ### NodeMCU.ino
 
 ###### info:
-1. you can get ServerExceed library from (nick41746/ServerExceed)[https://github.com/nick41746/ServerExceed]
+1. you can get ServerExceed library from [nick41746/ServerExceed](https://github.com/nick41746/ServerExceed)
