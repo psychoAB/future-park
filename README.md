@@ -9,7 +9,7 @@
 ###### 1. [Natchanan Thongtem](https://github.com/psychoAB) (me)
 ###### 2. [Dantai Limlawan](https://github.com/RocKIn0X)
 ###### 3. [Kanoktat Ninklam](https://github.com/nkbss)
-###### 4. [Tanaporn ???](https://github.com/BBgun1996)
+###### 4. [Tanaporn Thaitragulpanich](https://github.com/BBgun1996)
 ###### 5. Pisit Srijan
 > All of them helped me write some function of these code. Not for my comfort, but for their experience
 
